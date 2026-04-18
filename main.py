@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
-from agent import graph   # 👈 LangGraph import
+from agent import graph  
+from database import SessionLocal,Candidate
 
 app = FastAPI()
 
-# Simple in-memory storage
-candidates = []
+
+# candidates = []
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -34,7 +35,7 @@ def submit(
     email: str = Form(...),
     resume: str = Form(...)
 ):
-    # 🔥 LangGraph execution
+    #  LangGraph execution
     result = graph.invoke({
         "name": name,
         "email": email,
@@ -46,19 +47,23 @@ def submit(
     questions = result.get("questions", [])
     hr_questions = result.get("hr_questions", [])
 
-    # Store candidate
-    candidate = {
-        "name": name,
-        "email": email,
-        "resume": resume,
-        "score": score,
-        "status": status,
-    }
+    # SAVE TO DATABASE
+    db = SessionLocal()
 
-    candidates.append(candidate)
+    new_candidate = Candidate(
+        name=name,
+        email=email,
+        score=score,
+        status=status
+    )
 
-    # Fake email
-    print("Email sent to candidate")
+    db.add(new_candidate)
+    db.commit()
+    db.close()
+
+    print("Saved to DB")
+
+
 
     # Rejection case
     if status == "Rejected":
@@ -85,19 +90,22 @@ def submit(
     <a href="/dashboard">Go to Dashboard</a>
     """
 
-
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
+    db = SessionLocal()
+    data = db.query(Candidate).all()
+
     html = "<h2>Dashboard</h2>"
 
-    for c in candidates:
+    for c in data:
         html += f"""
         <div style="border:1px solid black; padding:10px; margin:10px;">
-            <p><b>Name:</b> {c['name']}</p>
-            <p><b>Email:</b> {c['email']}</p>
-            <p><b>Score:</b> {c['score']}</p>
-            <p><b>Status:</b> {c['status']}</p>
+            <p><b>Name:</b> {c.name}</p>
+            <p><b>Email:</b> {c.email}</p>
+            <p><b>Score:</b> {c.score}</p>
+            <p><b>Status:</b> {c.status}</p>
         </div>
         """
 
+    db.close()
     return html
