@@ -1,8 +1,7 @@
 from langgraph.graph import StateGraph
-
-# State object (dict is enough)
 from typing import TypedDict, List
 
+# ---------------- STATE ----------------
 class State(TypedDict, total=False):
     name: str
     email: str
@@ -11,6 +10,8 @@ class State(TypedDict, total=False):
     status: str
     questions: List[str]
     hr_questions: List[str]
+    history: List[str]   #  Short-term memory
+
 
 # ---------------- NODE 1 ----------------
 # ATS Scoring
@@ -22,14 +23,15 @@ def ats_node(state: State):
 
     return {
         "score": score,
-        "status": status
+        "status": status,
+        "history": [f"ATS Score: {score}"]   # Initialize history
     }
 
 
 # ---------------- NODE 2 ----------------
 # Interview Questions
 def interview_node(state: State):
-    if state["status"] == "Rejected":
+    if state.get("status") == "Rejected":
         return {}
 
     return {
@@ -37,20 +39,23 @@ def interview_node(state: State):
             "What is Python?",
             "Explain OOP?",
             "What is API?"
-        ]
+        ],
+        "history": state.get("history", []) + ["Interview questions generated"]
     }
+
 
 # ---------------- NODE 3 ----------------
 # HR Screening
 def hr_node(state: State):
-    if state["status"] == "Rejected":
+    if state.get("status") == "Rejected":
         return {}
 
     return {
         "hr_questions": [
             "What is your notice period?",
             "When can you join?"
-        ]
+        ],
+        "history": state.get("history", []) + ["HR questions generated"]
     }
 
 
