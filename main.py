@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
-from agent import graph
+from agent import graph   # 👈 LangGraph import
 
 app = FastAPI()
 
@@ -34,39 +34,52 @@ def submit(
     email: str = Form(...),
     resume: str = Form(...)
 ):
-    score = 80 if "python" in resume.lower() else 60
+    # 🔥 LangGraph execution
+    result = graph.invoke({
+        "name": name,
+        "email": email,
+        "resume": resume
+    })
 
-    questions = [
-        "What is Python?",
-        "Explain OOP?",
-        "What is API?"
-    ]
+    score = result["score"]
+    status = result["status"]
+    questions = result.get("questions", [])
+    hr_questions = result.get("hr_questions", [])
 
+    # Store candidate
     candidate = {
         "name": name,
         "email": email,
         "resume": resume,
         "score": score,
-        "status": "Interview" if score >= 80 else "Rejected",
-        "questions": questions
+        "status": status,
     }
 
     candidates.append(candidate)
+
+    # Fake email
     print("Email sent to candidate")
 
-    if score < 80:
+    # Rejection case
+    if status == "Rejected":
         return f"""
         <h3>Rejected (Score: {score})</h3>
         <a href='/'>Back</a>
         """
 
-    # Show interview questions
+    # Build question UI
     q_html = ""
+
     for q in questions:
         q_html += f"<p>{q}</p><input type='text'><br>"
 
+    for q in hr_questions:
+        q_html += f"<p>{q}</p><input type='text'><br>"
+
     return f"""
-    <h3>Interview Round</h3>
+    <h3>Interview + HR Round</h3>
+    <p><b>Name:</b> {name}</p>
+    <p><b>Email:</b> {email}</p>
     {q_html}
     <br>
     <a href="/dashboard">Go to Dashboard</a>

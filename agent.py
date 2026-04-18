@@ -1,9 +1,16 @@
 from langgraph.graph import StateGraph
 
 # State object (dict is enough)
-class State(dict):
-    pass
+from typing import TypedDict, List
 
+class State(TypedDict, total=False):
+    name: str
+    email: str
+    resume: str
+    score: int
+    status: str
+    questions: List[str]
+    hr_questions: List[str]
 
 # ---------------- NODE 1 ----------------
 # ATS Scoring
@@ -11,40 +18,40 @@ def ats_node(state: State):
     resume = state["resume"]
 
     score = 80 if "python" in resume.lower() else 60
+    status = "Interview" if score >= 80 else "Rejected"
 
-    state["score"] = score
-    state["status"] = "Interview" if score >= 80 else "Rejected"
-
-    return state
+    return {
+        "score": score,
+        "status": status
+    }
 
 
 # ---------------- NODE 2 ----------------
 # Interview Questions
 def interview_node(state: State):
     if state["status"] == "Rejected":
-        return state
+        return {}
 
-    state["questions"] = [
-        "What is Python?",
-        "Explain OOP?",
-        "What is API?"
-    ]
-
-    return state
-
+    return {
+        "questions": [
+            "What is Python?",
+            "Explain OOP?",
+            "What is API?"
+        ]
+    }
 
 # ---------------- NODE 3 ----------------
 # HR Screening
 def hr_node(state: State):
     if state["status"] == "Rejected":
-        return state
+        return {}
 
-    state["hr_questions"] = [
-        "What is your notice period?",
-        "When can you join?"
-    ]
-
-    return state
+    return {
+        "hr_questions": [
+            "What is your notice period?",
+            "When can you join?"
+        ]
+    }
 
 
 # ---------------- BUILD GRAPH ----------------
